@@ -78,7 +78,7 @@
     .side-note { margin-top: 22px; padding: 14px; border-radius: 12px; border: 1px solid rgba(101, 230, 194, .22); background: rgba(101, 230, 194, .055); color: #c1d9d8; font-size: .82rem; }
     .side-note strong { color: var(--mint); }
 
-    .results { margin-top: 24px; }
+    .results { margin-top: 24px; scroll-margin-top: 18px; }
     .results-header { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: end; margin-bottom: 13px; }
     .results-header h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.025em; }
     .results-count { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .78rem; }
@@ -303,7 +303,7 @@
       </aside>
     </div>
 
-    <section class="results" aria-labelledby="resultsTitle">
+    <section class="results" id="resultsSection" aria-labelledby="resultsTitle">
       <div class="results-header">
         <h2 id="resultsTitle">Resultados</h2>
         <span id="resultsCount" class="results-count">Sin consultas todavía</span>
@@ -320,7 +320,7 @@
   </main>
 
   <script>
-    const PROLOG_FILE = "base_conocimiento.pl";
+    const PROLOG_FILE = "base_conocimiento_sin_comentarios.pl";
     const statusBox = document.getElementById("engineStatus");
     const statusText = document.getElementById("engineStatusText");
     const form = document.getElementById("preferencesForm");
@@ -331,6 +331,7 @@
     const resultsCards = document.getElementById("resultsCards");
     const resultsMessage = document.getElementById("resultsMessage");
     const resultsCount = document.getElementById("resultsCount");
+    const resultsSection = document.getElementById("resultsSection");
     const queryDetails = document.getElementById("queryDetails");
     const queryCode = document.getElementById("queryCode");
     let prologCode = "";
@@ -630,11 +631,20 @@
       }
     }
 
+    function scrollToResults() {
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      resultsSection.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start"
+      });
+    }
+
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       if (!prologCode) {
         setEngineStatus("La base de conocimientos no está disponible", "error");
-        resultsMessage.textContent = "Comprueba que base_conocimiento.pl esté en la misma carpeta que index.html y abre la página mediante Live Server o GitHub Pages.";
+        resultsMessage.textContent = "Comprueba que base_conocimiento_sin_comentarios.pl esté en la misma carpeta que index.html y abre la página mediante Live Server o GitHub Pages.";
+        scrollToResults();
         return;
       }
       currentQueryNumber += 1;
@@ -643,6 +653,7 @@
       const query = buildQuery(values);
       queryCode.textContent = query;
       queryDetails.hidden = false;
+      scrollToResults();
       executeQuery(query, values, currentQueryNumber);
     });
 
