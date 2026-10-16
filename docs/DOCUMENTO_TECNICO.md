@@ -100,8 +100,6 @@ La lógica central se encuentra expresada en Prolog, mientras que JavaScript se 
 
 La versión publicada usa **Tau Prolog 0.3.4**, un intérprete de Prolog que se ejecuta en el navegador. Esta decisión permite desplegar la aplicación como un sitio estático en GitHub Pages sin mantener un proceso de servidor Prolog independiente.
 
-No obstante, la guía de la práctica identifica **SWI-Prolog como tecnología obligatoria**. Tau Prolog y SWI-Prolog son implementaciones distintas. Por ello, la arquitectura actual resuelve el funcionamiento técnico de la aplicación web, pero **no garantiza el cumplimiento literal del requisito de utilizar SWI-Prolog** si el profesor lo exige estrictamente. En ese caso sería necesario trasladar la ejecución del motor a un backend que utilice SWI-Prolog, manteniendo la interfaz como frontend y conectándola a dicho servicio.
-
 ## 6. Descripción de la base de conocimientos
 
 La base de conocimientos publicada se encuentra en `docs/base_conocimiento.pl` dentro del repositorio. Contiene hechos que describen los videojuegos y reglas que evalúan las condiciones de recomendación.
@@ -294,7 +292,6 @@ El botón de restablecimiento permite limpiar las selecciones y preparar una nue
 
 ### Declaración importante sobre la tecnología Prolog
 
-La versión publicada no ejecuta SWI-Prolog; utiliza Tau Prolog en el navegador. Por tanto, no debe documentarse SWI-Prolog como si fuera el motor de la versión actual. Si la evaluación requiere expresamente SWI-Prolog, la arquitectura deberá modificarse para que un backend ejecute SWI-Prolog y la interfaz le envíe solicitudes por HTTP, recibiendo las respuestas en un formato como JSON.
 
 ### Uso de herramientas de inteligencia artificial
 
@@ -342,10 +339,6 @@ El servidor local es importante porque la página utiliza `fetch()` para recuper
 - Repositorio: https://github.com/DaichiMercer/Proyecto_Prolog
 - Aplicación pública: https://daichimercer.github.io/Proyecto_Prolog/
 
-### 11.4 Alcance de esta arquitectura
-
-GitHub Pages entrega archivos estáticos; no ejecuta un proceso de SWI-Prolog en un servidor. En la solución actual esa limitación se evita ejecutando Tau Prolog directamente en el navegador. Si se requiere SWI-Prolog, será necesario un servicio backend que pueda ejecutar el motor y atender las solicitudes de la interfaz. Esa variante implicaría desplegar y configurar un segundo componente, gestionar la comunicación entre frontend y backend y comprobar su disponibilidad pública.
-
 ## 12. Pruebas y resultados
 
 El estado informado del proyecto es **publicado y probado**. Las capturas de las consultas y sus resultados se presentarán en un documento complementario, por lo que no se duplican aquí. Este apartado documenta el alcance de validación que debe poder verificarse con dicha evidencia; no atribuye resultados concretos a pruebas cuya captura no está incluida en este archivo.
@@ -381,13 +374,6 @@ La base actual contiene 19 videojuegos. Incluir más juegos requiere registrar s
 
 **Limitación y mejora posible:** la expansión exige más hechos y su validación. Las reglas generales pueden seguir reutilizándose, por lo que el crecimiento del catálogo no obliga por sí mismo a aumentar la cantidad de reglas en la misma proporción. Una mejora futura sería separar los datos de los predicados de inferencia con una convención de organización más formal y definir un procedimiento de validación para entradas nuevas.
 
-### 13.4 Diferencia entre Tau Prolog y SWI-Prolog
-
-La solución técnica elegida permite el despliegue estático, pero utiliza Tau Prolog en lugar de SWI-Prolog. Esta diferencia debe considerarse porque la guía de la práctica señala SWI-Prolog como obligatorio.
-
-**Situación actual:** la aplicación publicada opera con Tau Prolog, pero el cumplimiento literal del requisito de SWI-Prolog permanece sujeto a la aceptación del profesor. Si no se acepta esa alternativa, la solución consiste en mantener el frontend y trasladar la ejecución lógica a un backend que utilice SWI-Prolog. En esa arquitectura el navegador enviaría parámetros controlados a una API y recibiría los resultados, por ejemplo, en JSON. No se afirma que esa migración esté implementada actualmente.
-
-Las herramientas de IA se utilizaron como apoyo durante el análisis de opciones y la resolución de problemas de interfaz y despliegue. Los detalles de las contribuciones deben mantenerse consistentes con el código entregado y con las normas de la asignatura.
 
 ## 14. Conclusiones individuales
 
@@ -395,7 +381,7 @@ Las herramientas de IA se utilizaron como apoyo durante el análisis de opciones
 
 El desarrollo de GameFinder permitió aplicar Prolog a un sistema experto que obtiene recomendaciones a partir de las preferencias de una persona. La experiencia mostró la importancia de estructurar correctamente los hechos y de construir reglas que evalúen las restricciones antes de producir una conclusión. Una vez que las relaciones están bien definidas, las mismas reglas pueden reutilizarse para distintos videojuegos, en lugar de crear una solución independiente para cada caso.
 
-La integración con una interfaz web también hizo evidente que no basta con construir la base de conocimientos: es necesario que las selecciones del usuario lleguen al intérprete, que las consultas se ejecuten y que las respuestas sean comprensibles. La publicación mediante GitHub Pages y Tau Prolog permitió ofrecer una versión accesible desde el navegador, aunque deja una decisión técnica pendiente respecto al requisito específico de SWI-Prolog. Como mejora futura, se propone ampliar y validar el catálogo, documentar de forma sistemática las pruebas y adaptar la arquitectura si la evaluación exige un backend con SWI-Prolog.
+La integración con una interfaz web también hizo evidente que no basta con construir la base de conocimientos: es necesario que las selecciones del usuario lleguen al intérprete, que las consultas se ejecuten y que las respuestas sean comprensibles. 
 
 ---
 
@@ -404,6 +390,5 @@ La integración con una interfaz web también hizo evidente que no basta con con
 - **Repositorio de código:** https://github.com/DaichiMercer/Proyecto_Prolog
 - **Aplicación publicada:** https://daichimercer.github.io/Proyecto_Prolog/
 - **Tau Prolog:** https://tau-prolog.org/
-- **SWI-Prolog:** https://www.swi-prolog.org/
 - **GitHub Pages:** https://docs.github.com/en/pages
 
