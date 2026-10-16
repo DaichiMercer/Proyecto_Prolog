@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema experto de recomendación de videojuegos con Prolog.">
+  <title>GameFinder | Recomendador Prolog</title>
+  <script src="https://cdn.jsdelivr.net/npm/tau-prolog@0.3.4/modules/core.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0d17;
+      --panel: #111827;
+      --panel-soft: #171f31;
+      --border: #2a354b;
+      --text: #f3f6ff;
+      --muted: #a4afc5;
+      --accent: #9b8cff;
+      --accent-strong: #7763f3;
+      --mint: #65e6c2;
+      --danger: #ff8d9c;
+      --shadow: 0 20px 55px rgba(0, 0, 0, .25);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(ellipse at 12% 0%, rgba(119, 99, 243, .18), transparent 35rem),
+        radial-gradient(ellipse at 95% 15%, rgba(101, 230, 194, .09), transparent 30rem),
+        var(--bg);
+      line-height: 1.5;
+    }
+
+    .page { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 32px; }
+    .eyebrow { display: inline-flex; gap: 8px; align-items: center; color: var(--mint); font-size: .76rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 15px rgba(101, 230, 194, .75); }
+    header { margin-bottom: 26px; }
+    h1 { margin: 12px 0 10px; font-size: clamp(2rem, 4.5vw, 3.5rem); line-height: 1.05; letter-spacing: -.045em; }
+    h1 span { color: var(--accent); }
+    .intro { max-width: 720px; margin: 0; color: var(--muted); font-size: 1.04rem; }
+
+    .engine-status { display: flex; align-items: center; gap: 10px; margin-top: 22px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 13px; background: rgba(17, 24, 39, .8); color: var(--muted); font-size: .9rem; }
+    .status-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: #e9b95b; }
+    .engine-status.ready .status-dot { background: var(--mint); box-shadow: 0 0 12px rgba(101, 230, 194, .5); }
+    .engine-status.error .status-dot { background: var(--danger); }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, .7fr); gap: 22px; align-items: start; }
+    .panel { min-width: 0; border: 1px solid var(--border); border-radius: 20px; background: linear-gradient(160deg, rgba(22, 30, 47, .97), rgba(15, 21, 34, .97)); box-shadow: var(--shadow); overflow: hidden; }
+    .panel-heading { padding: 22px 24px 18px; border-bottom: 1px solid var(--border); }
+    .panel-heading h2 { margin: 0; font-size: 1.1rem; letter-spacing: -.015em; }
+    .panel-heading p { margin: 6px 0 0; color: var(--muted); font-size: .88rem; }
+    form { padding: 22px 24px 24px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+    .field { min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    label { display: block; margin-bottom: 7px; font-size: .87rem; font-weight: 700; color: #dfe5f4; }
+    select { appearance: none; width: 100%; min-height: 45px; padding: 11px 38px 11px 12px; border: 1px solid #35425b; border-radius: 10px; color: var(--text); background: #0d1422; font: inherit; font-size: .91rem; cursor: pointer; outline: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a4afc5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; }
+    select:focus-visible, button:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+    select:disabled { opacity: .55; cursor: not-allowed; }
+    .hint { margin: 6px 0 0; color: var(--muted); font-size: .77rem; }
+    .genre-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+    button { min-height: 45px; padding: 11px 17px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-weight: 800; cursor: pointer; transition: transform .15s ease, filter .15s ease, border-color .15s ease; }
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .primary { flex: 1 1 220px; color: #fff; background: linear-gradient(135deg, var(--accent-strong), #5f4ee0); box-shadow: 0 8px 20px rgba(119, 99, 243, .2); }
+    .secondary { color: #dfe5f4; background: transparent; border-color: #35425b; }
+    .side-content { padding: 21px 22px 24px; }
+    .side-content h3 { margin: 0 0 12px; font-size: 1rem; }
+    .steps { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+    .steps li { position: relative; padding-left: 39px; color: var(--muted); font-size: .88rem; counter-increment: step; }
+    .steps li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #514b85; border-radius: 9px; color: #c9c0ff; background: rgba(119, 99, 243, .12); font-size: .7rem; font-weight: 800; }
+    .side-note { margin-top: 22px; padding: 14px; border-radius: 12px; border: 1px solid rgba(101, 230, 194, .22); background: rgba(101, 230, 194, .055); color: #c1d9d8; font-size: .82rem; }
+    .side-note strong { color: var(--mint); }
+
+    .results { margin-top: 24px; }
+    .results-header { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: end; margin-bottom: 13px; }
+    .results-header h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.025em; }
+    .results-count { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .78rem; }
+    .results-message { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .game-card { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 15px; background: rgba(17, 24, 39, .88); animation: rise .2s ease-out both; }
+    .game-card-top { display: flex; gap: 8px; justify-content: space-between; align-items: start; }
+    .game-card h3 { margin: 0; font-size: 1.02rem; line-height: 1.3; overflow-wrap: anywhere; }
+    .game-icon { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: rgba(119, 99, 243, .15); color: #c4bbff; font-size: 1rem; }
+    .price { margin: 18px 0 9px; font-size: 1.38rem; font-weight: 850; letter-spacing: -.04em; }
+    .price small { color: var(--muted); font-size: .72rem; font-weight: 500; letter-spacing: 0; }
+    .pill { display: inline-flex; margin-top: 4px; padding: 4px 8px; border: 1px solid rgba(101, 230, 194, .22); border-radius: 999px; background: rgba(101, 230, 194, .08); color: var(--mint); font-size: .72rem; font-weight: 800; }
+    .card-description { margin: 10px 0 0; color: var(--muted); font-size: .81rem; }
+    .empty-state { padding: 28px; border: 1px dashed #394660; border-radius: 15px; background: rgba(17, 24, 39, .45); color: var(--muted); text-align: center; }
+    .empty-state strong { display: block; margin-bottom: 5px; color: var(--text); }
+    details { margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: rgba(17, 24, 39, .5); }
+    summary { padding: 12px 15px; color: #d7ddef; font-size: .85rem; cursor: pointer; }
+    .query-code { display: block; overflow-wrap: anywhere; white-space: pre-wrap; padding: 0 15px 15px; color: var(--mint); font: .82rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .diagnostic-list { display: grid; gap: 10px; }
+    .diagnostic-item { padding: 13px 15px; border: 1px solid var(--border); border-radius: 12px; background: rgba(17, 24, 39, .8); }
+    .diagnostic-item strong { display: block; margin-bottom: 3px; }
+    .diagnostic-item span { color: var(--muted); font-size: .88rem; }
+    footer { margin-top: 26px; color: #7e8ba5; font-size: .78rem; text-align: center; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } .side-content { padding-top: 18px; } .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } .steps li { padding-left: 0; padding-top: 36px; } }
+    @media (max-width: 650px) { .page { width: min(100% - 22px, 1080px); padding-top: 27px; } .fields, .genre-row, .cards { grid-template-columns: 1fr; } .field.full { grid-column: auto; } .panel-heading, form { padding-left: 17px; padding-right: 17px; } .steps { grid-template-columns: 1fr; } .steps li { padding-left: 39px; padding-top: 0; } .results-header { align-items: center; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">Sistema experto · Prolog</div>
+      <h1>Encuentra tu próximo <span>juego.</span></h1>
+      <p class="intro">Selecciona tus preferencias y deja que las reglas de Prolog busquen videojuegos compatibles con tu plataforma, presupuesto, tiempo y forma de jugar.</p>
+      <div class="engine-status" id="engineStatus" role="status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span id="engineStatusText">Cargando intérprete y base de conocimientos…</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="formTitle">
+        <div class="panel-heading">
+          <h2 id="formTitle">Tus preferencias</h2>
+          <p>Todos los campos se usan para construir una consulta Prolog.</p>
+        </div>
+        <form id="preferencesForm">
+          <div class="fields">
+            <div class="field">
+              <label for="platform">Plataforma</label>
+              <select id="platform" name="platform">
+                <option value="pc" selected>PC</option>
+                <option value="playstation">PlayStation</option>
+                <option value="xbox">Xbox</option>
+                <option value="switch">Nintendo Switch</option>
+                <option value="movil">Móvil</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="budget">Presupuesto máximo</label>
+              <select id="budget" name="budget">
+                <option value="0">Gratis · $0 MXN</option>
+                <option value="100">Hasta $100 MXN</option>
+                <option value="150">Hasta $150 MXN</option>
+                <option value="200">Hasta $200 MXN</option>
+                <option value="300" selected>Hasta $300 MXN</option>
+                <option value="500">Hasta $500 MXN</option>
+                <option value="700">Hasta $700 MXN</option>
+                <option value="1000">Hasta $1,000 MXN</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="mode">Modo de juego</label>
+              <select id="mode" name="mode">
+                <option value="cualquiera">Cualquiera</option>
+                <option value="individual" selected>Un jugador</option>
+                <option value="cooperativo_local">Cooperativo local</option>
+                <option value="cooperativo_en_linea">Cooperativo en línea</option>
+                <option value="competitivo_en_linea">Competitivo en línea</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="duration">Tiempo por sesión</label>
+              <select id="duration" name="duration">
+                <option value="corta">Corta</option>
+                <option value="media" selected>Media</option>
+                <option value="larga">Larga</option>
+              </select>
+              <p class="hint">La duración es una categoría orientativa del modelo.</p>
+            </div>
+            <div class="field">
+              <label for="connection">Conexión disponible</label>
+              <select id="connection" name="connection">
+                <option value="sin_internet" selected>Sin internet</option>
+                <option value="con_internet">Con internet</option>
+                <option value="cualquiera">Cualquiera</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="difficulty">Dificultad preferida</label>
+              <select id="difficulty" name="difficulty">
+                <option value="cualquiera" selected>Cualquiera</option>
+                <option value="facil">Fácil</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Géneros preferidos</label>
+              <div class="genre-row">
+                <div>
+                  <select id="genre1" name="genre1" aria-label="Género preferido principal">
+                    <option value="">Sin preferencia</option>
+                    <option value="accion">Acción</option>
+                    <option value="aventura" selected>Aventura</option>
+                    <option value="carreras">Carreras</option>
+                    <option value="cartas">Cartas</option>
+                    <option value="cocina">Cocina</option>
+                    <option value="combate">Combate</option>
+                    <option value="competicion">Competición</option>
+                    <option value="deduccion_social">Deducción social</option>
+                    <option value="deportes">Deportes</option>
+                    <option value="disparos">Disparos</option>
+                    <option value="estrategia">Estrategia</option>
+                    <option value="exploracion">Exploración</option>
+                    <option value="fiesta">Fiesta</option>
+                    <option value="metroidvania">Metroidvania</option>
+                    <option value="plataformas">Plataformas</option>
+                    <option value="puzzle">Rompecabezas</option>
+                    <option value="roguelike">Roguelike</option>
+                    <option value="rpg">RPG</option>
+                    <option value="sandbox">Sandbox</option>
+                    <option value="simulacion">Simulación</option>
+                    <option value="supervivencia">Supervivencia</option>
+                  </select>
+                </div>
+                <div>
+                  <select id="genre2" name="genre2" aria-label="Género preferido secundario">
+                    <option value="">Sin segundo género</option>
+                    <option value="accion">Acción</option>
+                    <option value="aventura">Aventura</option>
+                    <option value="carreras">Carreras</option>
+                    <option value="cartas">Cartas</option>
+                    <option value="cocina">Cocina</option>
+                    <option value="combate">Combate</option>
+                    <option value="competicion">Competición</option>
+                    <option value="deduccion_social">Deducción social</option>
+                    <option value="deportes">Deportes</option>
+                    <option value="disparos">Disparos</option>
+                    <option value="estrategia">Estrategia</option>
+                    <option value="exploracion">Exploración</option>
+                    <option value="fiesta">Fiesta</option>
+                    <option value="metroidvania">Metroidvania</option>
+                    <option value="plataformas">Plataformas</option>
+                    <option value="puzzle">Rompecabezas</option>
+                    <option value="roguelike">Roguelike</option>
+                    <option value="rpg">RPG</option>
+                    <option value="sandbox">Sandbox</option>
+                    <option value="simulacion">Simulación</option>
+                    <option value="supervivencia">Supervivencia</option>
+                  </select>
+                </div>
+              </div>
+              <p class="hint">Puedes elegir hasta dos géneros. Prolog considera que coincide si el juego tiene al menos uno.</p>
+            </div>
+            <div class="field full">
+              <label for="queryType">Tipo de consulta</label>
+              <select id="queryType" name="queryType">
+                <option value="recommend" selected>Recomendar juegos que coincidan</option>
+                <option value="alternative">Buscar alternativas viables</option>
+                <option value="diagnostic">Explicar por qué se descarta un juego</option>
+              </select>
+            </div>
+            <div class="field full" id="diagnosticField" hidden>
+              <label for="gameToCheck">Juego que deseas analizar</label>
+              <select id="gameToCheck" name="gameToCheck">
+                <option value="stardew_valley">Stardew Valley</option>
+                <option value="hollow_knight">Hollow Knight</option>
+                <option value="celeste">Celeste</option>
+                <option value="terraria">Terraria</option>
+                <option value="slay_the_spire">Slay the Spire</option>
+                <option value="portal_2">Portal 2</option>
+                <option value="overcooked_2">Overcooked! 2</option>
+                <option value="it_takes_two">It Takes Two</option>
+                <option value="among_us">Among Us</option>
+                <option value="rocket_league">Rocket League</option>
+                <option value="fall_guys">Fall Guys</option>
+                <option value="a_short_hike">A Short Hike</option>
+                <option value="gris">GRIS</option>
+                <option value="cuphead">Cuphead</option>
+                <option value="vampire_survivors">Vampire Survivors</option>
+                <option value="balatro">Balatro</option>
+                <option value="hades">Hades</option>
+                <option value="minecraft">Minecraft</option>
+                <option value="brawlhalla">Brawlhalla</option>
+              </select>
+              <p class="hint">El diagnóstico utiliza los motivos que están implementados en tu predicado Prolog: plataforma, presupuesto, modo, tiempo y conexión.</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="runButton" type="submit" disabled>Consultar Prolog</button>
+            <button class="secondary" id="resetButton" type="reset">Restablecer</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="panel" aria-labelledby="howTitle">
+        <div class="panel-heading">
+          <h2 id="howTitle">¿Cómo funciona?</h2>
+          <p>La interfaz entrega valores a tus predicados Prolog.</p>
+        </div>
+        <div class="side-content">
+          <ol class="steps">
+            <li>Seleccionas plataforma, presupuesto y tus preferencias.</li>
+            <li>La página crea una consulta para <code>recomendar/10</code>, <code>alternativa/10</code> o <code>motivo_descarte/7</code>.</li>
+            <li>Tau Prolog evalúa los hechos y las reglas del archivo de conocimiento.</li>
+          </ol>
+          <div class="side-note"><strong>Importante:</strong> el precio y las categorías provienen de la base de conocimiento del proyecto. Son valores de referencia, no datos de tiendas en tiempo real.</div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="results" aria-labelledby="resultsTitle">
+      <div class="results-header">
+        <h2 id="resultsTitle">Resultados</h2>
+        <span id="resultsCount" class="results-count">Sin consultas todavía</span>
+      </div>
+      <p class="results-message" id="resultsMessage">Selecciona tus preferencias y pulsa «Consultar Prolog» para comenzar.</p>
+      <div class="cards" id="resultsCards"></div>
+      <details id="queryDetails" hidden>
+        <summary>Ver consulta Prolog generada</summary>
+        <code id="queryCode" class="query-code"></code>
+      </details>
+    </section>
+
+    <footer>GameFinder · Sistema experto académico de recomendación de videojuegos · Prolog + HTML</footer>
+  </main>
+
+  <script>
+    const PROLOG_FILE = "base_conocimiento_sin_comentarios.pl";
+    const statusBox = document.getElementById("engineStatus");
+    const statusText = document.getElementById("engineStatusText");
+    const form = document.getElementById("preferencesForm");
+    const runButton = document.getElementById("runButton");
+    const queryType = document.getElementById("queryType");
+    const diagnosticField = document.getElementById("diagnosticField");
+    const gameToCheck = document.getElementById("gameToCheck");
+    const resultsCards = document.getElementById("resultsCards");
+    const resultsMessage = document.getElementById("resultsMessage");
+    const resultsCount = document.getElementById("resultsCount");
+    const queryDetails = document.getElementById("queryDetails");
+    const queryCode = document.getElementById("queryCode");
+    let prologCode = "";
+    let currentQueryNumber = 0;
+
+    const modeLabels = {
+      individual: "Un jugador",
+      cooperativo_local: "Cooperativo local",
+      cooperativo_en_linea: "Cooperativo en línea",
+      competitivo_en_linea: "Competitivo en línea",
+      cualquiera: "Cualquier modo"
+    };
+    const levelLabels = {
+      alta: "Coincidencia alta",
+      media: "Coincidencia media",
+      general: "Coincidencia general"
+    };
+    const diagnosticGameNames = {
+      stardew_valley: "Stardew Valley",
+      hollow_knight: "Hollow Knight",
+      celeste: "Celeste",
+      terraria: "Terraria",
+      slay_the_spire: "Slay the Spire",
+      portal_2: "Portal 2",
+      overcooked_2: "Overcooked! 2",
+      it_takes_two: "It Takes Two",
+      among_us: "Among Us",
+      rocket_league: "Rocket League",
+      fall_guys: "Fall Guys",
+      a_short_hike: "A Short Hike",
+      gris: "GRIS",
+      cuphead: "Cuphead",
+      vampire_survivors: "Vampire Survivors",
+      balatro: "Balatro",
+      hades: "Hades",
+      minecraft: "Minecraft",
+      brawlhalla: "Brawlhalla"
+    };
+
+    function setEngineStatus(message, state) {
+      statusText.textContent = message;
+      statusBox.classList.remove("ready", "error");
+      if (state) statusBox.classList.add(state);
+    }
+
+    function setQueryTypeVisibility() {
+      diagnosticField.hidden = queryType.value !== "diagnostic";
+      const labels = {
+        recommend: "Consultar recomendaciones",
+        alternative: "Buscar alternativas",
+        diagnostic: "Analizar juego"
+      };
+      runButton.textContent = labels[queryType.value] || "Consultar Prolog";
+    }
+
+    function getFormValues() {
+      const genres = [];
+      const first = document.getElementById("genre1").value;
+      const second = document.getElementById("genre2").value;
+      if (first) genres.push(first);
+      if (second && second !== first) genres.push(second);
+      return {
+        platform: document.getElementById("platform").value,
+        budget: Number(document.getElementById("budget").value),
+        mode: document.getElementById("mode").value,
+        duration: document.getElementById("duration").value,
+        connection: document.getElementById("connection").value,
+        difficulty: document.getElementById("difficulty").value,
+        genres,
+        queryType: queryType.value,
+        gameId: gameToCheck.value
+      };
+    }
+
+    function buildQuery(values) {
+      const genres = values.genres.length ? `[${values.genres.join(",")}]` : "[]";
+      if (values.queryType === "diagnostic") {
+        return `motivo_descarte(${values.platform}, ${values.budget}, ${values.mode}, ${values.duration}, ${values.connection}, ${values.gameId}, Motivo).`;
+      }
+      const predicate = values.queryType === "alternative" ? "alternativa" : "recomendar";
+      return `${predicate}(${values.platform}, ${values.budget}, ${genres}, ${values.mode}, ${values.duration}, ${values.connection}, ${values.difficulty}, IdJuego, Nombre, ${values.queryType === "alternative" ? "Motivo" : "Nivel"}), precio(IdJuego, Precio).`;
+    }
+
+    function termText(term) {
+      if (term === undefined || term === null) return "";
+      if (typeof term.value === "string" || typeof term.value === "number") return String(term.value);
+      if (typeof term.id === "string" || typeof term.id === "number") return String(term.id);
+      return String(term);
+    }
+
+    function termNumber(term) {
+      if (!term) return NaN;
+      if (typeof term.value === "number") return term.value;
+      const value = term.id !== undefined ? Number(term.id) : Number(term.toString());
+      return value;
+    }
+
+    function formatPrice(value) {
+      if (!Number.isFinite(value)) return "Precio no disponible";
+      if (value === 0) return "Gratis";
+      return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(value);
+    }
+
+    function clearResults() {
+      resultsCards.replaceChildren();
+      queryDetails.hidden = true;
+      queryCode.textContent = "";
+    }
+
+    function makeEmptyState(title, body) {
+      const box = document.createElement("div");
+      box.className = "empty-state";
+      box.style.gridColumn = "1 / -1";
+      const strong = document.createElement("strong");
+      strong.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = body;
+      box.append(strong, text);
+      resultsCards.append(box);
+    }
+
+    function createGameCard(result, type) {
+      const card = document.createElement("article");
+      card.className = "game-card";
+      const top = document.createElement("div");
+      top.className = "game-card-top";
+      const heading = document.createElement("h3");
+      heading.textContent = result.name;
+      const icon = document.createElement("span");
+      icon.className = "game-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "◆";
+      top.append(heading, icon);
+
+      const price = document.createElement("p");
+      price.className = "price";
+      price.textContent = formatPrice(result.price);
+      const small = document.createElement("small");
+      small.textContent = result.price === 0 ? " · precio registrado" : " MXN · precio registrado";
+      price.append(small);
+
+      const pill = document.createElement("span");
+      pill.className = "pill";
+      pill.textContent = type === "alternative" ? "Alternativa viable" : (levelLabels[result.level] || "Recomendación");
+
+      const description = document.createElement("p");
+      description.className = "card-description";
+      description.textContent = type === "alternative"
+        ? "Cumple las restricciones principales, aunque no coincide con todas las preferencias seleccionadas."
+        : `Modo registrado: ${modeLabels[result.mode] || "consultado"}.`;
+
+      card.append(top, price, pill, description);
+      return card;
+    }
+
+    function explainDiagnostic(term, values) {
+      if (!term) return "No se obtuvo un motivo de descarte.";
+      const name = term.id || "";
+      const args = term.args || [];
+      const argument = index => termText(args[index]);
+      switch (name) {
+        case "plataforma_incompatible":
+          return `El juego no está registrado para la plataforma seleccionada (${values.platform}).`;
+        case "supera_presupuesto":
+          return `El precio registrado es ${formatPrice(Number(argument(0)))} y supera tu presupuesto de ${formatPrice(Number(argument(1)))}.`;
+        case "modo_no_disponible":
+          return `El juego no ofrece el modo seleccionado (${modeLabels[argument(0)] || argument(0)}).`;
+        case "tiempo_no_compatible":
+          return `La duración registrada del juego no coincide con la sesión seleccionada (${argument(0)}).`;
+        case "conexion_no_compatible":
+          return `La conexión registrada no coincide con tu selección (${argument(0)}).`;
+        default:
+          return term.toString();
+      }
+    }
+
+    function renderDiagnostics(results, values) {
+      resultsCount.textContent = `${results.length} motivo${results.length === 1 ? "" : "s"}`;
+      if (!results.length) {
+        makeEmptyState("No se encontraron motivos de descarte", "Según los criterios que evalúa motivo_descarte/7, el juego no incumple las restricciones comprobadas. El predicado no revisa género ni dificultad.");
+        return;
+      }
+      const list = document.createElement("div");
+      list.className = "diagnostic-list";
+      list.style.gridColumn = "1 / -1";
+      const title = document.createElement("p");
+      title.className = "results-message";
+      title.style.gridColumn = "1 / -1";
+      title.textContent = `Motivos detectados para ${diagnosticGameNames[values.gameId] || values.gameId}:`;
+      resultsCards.append(title);
+      results.forEach(item => {
+        const entry = document.createElement("div");
+        entry.className = "diagnostic-item";
+        const strong = document.createElement("strong");
+        strong.textContent = diagnosticGameNames[values.gameId] || values.gameId;
+        const span = document.createElement("span");
+        span.textContent = item.reason;
+        entry.append(strong, span);
+        list.append(entry);
+      });
+      resultsCards.append(list);
+    }
+
+    function executeQuery(query, values, queryNumber) {
+      const session = pl.create(100000);
+      const results = [];
+      const isDiagnostic = values.queryType === "diagnostic";
+      const isAlternative = values.queryType === "alternative";
+      setEngineStatus("Consultando la base de conocimientos…", "ready");
+      runButton.disabled = true;
+      resultsMessage.textContent = "Prolog está evaluando los hechos y las reglas.";
+      resultsCount.textContent = "Consultando…";
+
+      session.consult(prologCode, {
+        success: function () {
+          session.query(query, {
+            success: function () {
+              function nextAnswer() {
+                if (queryNumber !== currentQueryNumber) return;
+                session.answer({
+                  success: function (answer) {
+                    if (queryNumber !== currentQueryNumber) return;
+                    if (isDiagnostic) {
+                      results.push({ reason: explainDiagnostic(answer.lookup("Motivo"), values) });
+                    } else {
+                      results.push({
+                        id: termText(answer.lookup("IdJuego")),
+                        name: termText(answer.lookup("Nombre")),
+                        level: isAlternative ? "" : termText(answer.lookup("Nivel")),
+                        price: termNumber(answer.lookup("Precio")),
+                        mode: values.mode
+                      });
+                    }
+                    if (results.length >= 100) {
+                      finishResults(true);
+                    } else {
+                      nextAnswer();
+                    }
+                  },
+                  fail: function () {
+                    finishResults(false);
+                  },
+                  error: function (error) {
+                    finishError(`Error al ejecutar la consulta: ${String(error)}`);
+                  },
+                  limit: function () {
+                    finishResults(true, "Se alcanzó el límite de pasos de consulta; se muestran las coincidencias encontradas hasta ahora.");
+                  }
+                });
+              }
+              nextAnswer();
+            },
+            error: function (error) {
+              finishError(`La consulta generada no se pudo interpretar: ${String(error)}`);
+            }
+          });
+        },
+        error: function (error) {
+          finishError(`No fue posible cargar el programa Prolog: ${String(error)}`);
+        }
+      });
+
+      function finishResults(limitReached, extraMessage) {
+        if (queryNumber !== currentQueryNumber) return;
+        runButton.disabled = false;
+        if (isDiagnostic) {
+          resultsMessage.textContent = "El diagnóstico muestra los motivos que devuelve motivo_descarte/7 con los filtros seleccionados.";
+          renderDiagnostics(results, values);
+        } else if (!results.length) {
+          resultsCount.textContent = "0 resultados";
+          if (isAlternative) {
+            makeEmptyState("No se encontraron alternativas", "Prueba con otro presupuesto, plataforma o modo de juego. El predicado de alternativas busca juegos viables que no coincidan con la combinación de género y dificultad.");
+            resultsMessage.textContent = "No hubo alternativas para esta combinación de filtros.";
+          } else {
+            makeEmptyState("No hay coincidencias exactas", "Prueba aumentando el presupuesto, cambiando la plataforma o relajando las preferencias. También puedes seleccionar «Buscar alternativas viables».");
+            resultsMessage.textContent = "La consulta terminó sin recomendaciones que cumplan todos los criterios.";
+          }
+        } else {
+          resultsCount.textContent = `${results.length} resultado${results.length === 1 ? "" : "s"}`;
+          resultsMessage.textContent = isAlternative
+            ? "Estas opciones cumplen las restricciones principales, aunque no satisfacen todas las preferencias indicadas."
+            : "Estos juegos coinciden con las reglas y preferencias que seleccionaste.";
+          results.forEach(result => resultsCards.append(createGameCard(result, values.queryType)));
+          if (limitReached) resultsMessage.textContent += " " + (extraMessage || "Se muestran los primeros resultados encontrados.");
+        }
+        if (extraMessage && !isDiagnostic) resultsMessage.textContent += " " + extraMessage;
+        setEngineStatus("Intérprete listo · consulta finalizada", "ready");
+      }
+
+      function finishError(message) {
+        if (queryNumber !== currentQueryNumber) return;
+        runButton.disabled = false;
+        setEngineStatus("Se produjo un error en la consulta", "error");
+        resultsCount.textContent = "Error";
+        resultsMessage.textContent = message;
+        if (!resultsCards.children.length) makeEmptyState("No fue posible obtener resultados", message);
+      }
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (!prologCode) {
+        setEngineStatus("La base de conocimientos no está disponible", "error");
+        resultsMessage.textContent = "Comprueba que base_conocimiento_sin_comentarios.pl esté en la misma carpeta que index.html y abre la página mediante Live Server o GitHub Pages.";
+        return;
+      }
+      currentQueryNumber += 1;
+      clearResults();
+      const values = getFormValues();
+      const query = buildQuery(values);
+      queryCode.textContent = query;
+      queryDetails.hidden = false;
+      executeQuery(query, values, currentQueryNumber);
+    });
+
+    queryType.addEventListener("change", setQueryTypeVisibility);
+    document.getElementById("resetButton").addEventListener("click", function () {
+      setTimeout(function () {
+        setQueryTypeVisibility();
+        clearResults();
+        resultsCount.textContent = "Sin consultas todavía";
+        resultsMessage.textContent = "Selecciona tus preferencias y pulsa «Consultar Prolog» para comenzar.";
+      }, 0);
+    });
+
+    async function loadKnowledgeBase() {
+      if (typeof pl === "undefined") {
+        setEngineStatus("No se pudo cargar Tau Prolog", "error");
+        resultsMessage.textContent = "Revisa tu conexión a internet, necesaria para cargar el intérprete de Tau Prolog.";
+        return;
+      }
+      try {
+        const response = await fetch(PROLOG_FILE);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        prologCode = await response.text();
+        const validationSession = pl.create(100000);
+        validationSession.consult(prologCode, {
+          success: function () {
+            setEngineStatus("Base de conocimientos cargada correctamente", "ready");
+            runButton.disabled = false;
+          },
+          error: function (error) {
+            prologCode = "";
+            setEngineStatus("La base de conocimientos contiene una incompatibilidad", "error");
+            resultsMessage.textContent = `Tau Prolog no pudo interpretar el archivo. Detalle: ${String(error)}`;
+          }
+        });
+      } catch (error) {
+        setEngineStatus("No se encontró el archivo Prolog", "error");
+        resultsMessage.textContent = `No se pudo leer ${PROLOG_FILE}. Coloca el archivo en la misma carpeta que index.html y abre la página con Live Server o publícalos juntos en GitHub Pages. Detalle: ${String(error)}`;
+      }
+    }
+
+    setQueryTypeVisibility();
+    loadKnowledgeBase();
+  </script>
+</body>
+</html>
