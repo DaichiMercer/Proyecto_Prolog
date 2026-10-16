@@ -320,7 +320,7 @@
   </main>
 
   <script>
-    const PROLOG_FILE = "base_conocimiento_sin_comentarios.pl";
+    const PROLOG_FILE = "base_conocimiento.pl";
     const statusBox = document.getElementById("engineStatus");
     const statusText = document.getElementById("engineStatusText");
     const form = document.getElementById("preferencesForm");
@@ -643,7 +643,7 @@
       event.preventDefault();
       if (!prologCode) {
         setEngineStatus("La base de conocimientos no está disponible", "error");
-        resultsMessage.textContent = "Comprueba que base_conocimiento_sin_comentarios.pl esté en la misma carpeta que index.html y abre la página mediante Live Server o GitHub Pages.";
+        resultsMessage.textContent = "Comprueba que base_conocimiento.pl esté en la misma carpeta que index.html y abre la página mediante Live Server o GitHub Pages.";
         scrollToResults();
         return;
       }
